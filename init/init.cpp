@@ -358,6 +358,9 @@ static void import_kernel_nv(const std::string& key, const std::string& value, b
         property_set("ro.boot." + key.substr(12), value);
     } else if (key == "mem_size") {
         property_set("ro.mem_size", value);
+    } else if (key == "need_ddr_window_test") {
+        LOG(INFO) << "import_kernel_nv key=" << key << ",value=" << value;
+        property_set("ro.first.boot.ddr.window", value);
     }
 }
 
@@ -392,6 +395,23 @@ static void export_lcd_status() {
         property_set("sys.lcd.exist", "0");
       //  property_set("media.omx.dw", "0");
       //  property_set("vendor.afbcd.enable", "1");
+    }
+    close(fd);
+}
+
+static void export_ext_board_status() {
+    int fd;
+    char buf[2048];
+    if ((fd = open("/proc/cmdline", O_RDONLY)) < 0) {
+       LOG(FATAL) << "Failed to export ext board status!";
+       property_set("sys.extboard.exist", "0");
+       return;
+    }
+    read(fd, buf, sizeof(buf) - 1);
+    if(strstr(buf,"ext_board_exist=1") != NULL) {
+        property_set("sys.extboard.exist", "1");
+    } else {
+        property_set("sys.extboard.exist", "0");
     }
     close(fd);
 }
@@ -692,6 +712,7 @@ int main(int argc, char** argv) {
     export_kernel_boot_props();
 
     export_lcd_status();
+    export_ext_board_status();
     // Make the time that init started available for bootstat to log.
     property_set("ro.boottime.init", getenv("INIT_STARTED_AT"));
     property_set("ro.boottime.init.selinux", getenv("INIT_SELINUX_TOOK"));
